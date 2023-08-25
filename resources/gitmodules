@@ -1,0 +1,10 @@
+[submodule "redhawk"]
+	path = redhawk
+	url = git@github.com:RedhawkSDR/redhawk.git
+[submodule "go-client"]
+	path = go-client
+	url = git@github.com:neovim/go-client.git
+[submodule "neovim.github.io"]
+	path = neovim.github.io
+	branch = "test-branch"
+	url = git@github.com:neovim/neovim.github.io.git

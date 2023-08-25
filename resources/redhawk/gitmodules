@@ -1,0 +1,3 @@
+[submodule "redhawk-submodule"]
+    path = redhawk-submodule
+    url = git@github.com:Lonestar137/submodule-test.git
