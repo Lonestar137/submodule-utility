@@ -35,20 +35,28 @@ dfs f path = do
   let arr = [words i | i <- lines modulefile]
   let parsedModules = map parseFile arr
   print path
-  result <- mapM f parsedModules
-  return parsedModules
+  clonedModules <- mapM f parsedModules
+
+  nextResults <- mapM (dfs f) [ s ++ "/.gitmodules" | s <- filter (/= "") clonedModules]
+  return (parsedModules ++ concat nextResults)
+
+  -- return parsedModules ++ dfs f module
+
 
   
+-- TODO: this needs to CD into the path before running the command.
 gitClone :: Maybe SubmoduleConfig -> IO String
 gitClone (Just (Path moduleConfig)) = do
   let command = "git submodule update --init " ++ show moduleConfig
   (_, Just hout, _, _) <- createProcess (shell command) { std_out = CreatePipe }
   output <- hGetContents hout
   putStrLn output
-  return ("Cloned " ++ moduleConfig)
+  putStrLn ("Current path: " ++ moduleConfig)
+  return moduleConfig
 gitClone _ = do
-  putStrLn "Nothing to clone."
-  return "Nothing to clone."
+  let message = "Not a path, ignoring . . ."
+  putStrLn message
+  return ""
 
  
 -- pretty printer for config object collection
