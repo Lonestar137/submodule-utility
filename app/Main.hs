@@ -28,28 +28,29 @@ parseFile x = case head x of
   _ -> Nothing
 
 
-dfs :: (Maybe SubmoduleConfig -> IO String) -> String -> IO [Maybe SubmoduleConfig]
+dfs :: (String -> Maybe SubmoduleConfig -> IO String) -> String -> IO [Maybe SubmoduleConfig]
 dfs f path = do
-  modulefile <- readFile (path ++ "/.gitmodules")
+  let moduleFilePath = path ++ "/.gitmodules"
+  modulefile <- readFile moduleFilePath
   let arr = [words i | i <- lines modulefile]
   let parsedModules = map parseFile arr
   print path
-  clonedModules <- mapM f parsedModules
+  clonedModules <- mapM (f path) parsedModules
 
-  nextResults <- mapM (dfs f) (filter (/= "") clonedModules)
+  nextResults <- mapM (dfs f) [path ++ "/" ++ s | s <- filter (/= "") clonedModules]
   return (parsedModules ++ concat nextResults)
 
   
 -- TODO: this needs to CD into the path before running the command.
-gitClone :: Maybe SubmoduleConfig -> IO String
-gitClone (Just (Path moduleConfig)) = do
+gitClone :: String -> Maybe SubmoduleConfig -> IO String
+gitClone basePath (Just (Path moduleConfig)) = do
   let command = "git submodule update --init " ++ show moduleConfig
-  (_, Just hout, _, _) <- createProcess (shell command) { std_out = CreatePipe }
+  (_, Just hout, _, _) <- createProcess (shell command) { std_out = CreatePipe, cwd = Just basePath }
   output <- hGetContents hout
   putStrLn output
   putStrLn ("Current path: " ++ moduleConfig)
   return moduleConfig
-gitClone _ = do
+gitClone _ _ = do
   let message = "Not a path, ignoring . . ."
   putStrLn message
   return ""
@@ -68,6 +69,12 @@ main :: IO ()
 main = do
   putStrLn "\n\n"
   -- result <- dfs gitClone "resources/gitmodules"
-  result <- dfs gitClone "."
+  let command = "pwd"
+  (_, Just hout, _, _) <- createProcess (shell command) { std_out = CreatePipe }
+  curdir <- hGetContents hout
+  let formattedPath = sanitizeString ["\n", "\r"] curdir
+  print formattedPath 
+  -- result <- dfs gitClone curdir
+  result <- dfs gitClone "/tmp/submodule-script-test"
   pp result
   putStrLn ""
