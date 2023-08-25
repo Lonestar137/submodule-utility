@@ -28,20 +28,16 @@ parseFile x = case head x of
   _ -> Nothing
 
 
-
 dfs :: (Maybe SubmoduleConfig -> IO String) -> String -> IO [Maybe SubmoduleConfig]
 dfs f path = do
-  modulefile <- readFile path
+  modulefile <- readFile (path ++ "/.gitmodules")
   let arr = [words i | i <- lines modulefile]
   let parsedModules = map parseFile arr
   print path
   clonedModules <- mapM f parsedModules
 
-  nextResults <- mapM (dfs f) [ s ++ "/.gitmodules" | s <- filter (/= "") clonedModules]
+  nextResults <- mapM (dfs f) (filter (/= "") clonedModules)
   return (parsedModules ++ concat nextResults)
-
-  -- return parsedModules ++ dfs f module
-
 
   
 -- TODO: this needs to CD into the path before running the command.
@@ -72,6 +68,6 @@ main :: IO ()
 main = do
   putStrLn "\n\n"
   -- result <- dfs gitClone "resources/gitmodules"
-  result <- dfs gitClone ".gitmodules"
+  result <- dfs gitClone "."
   pp result
   putStrLn ""
