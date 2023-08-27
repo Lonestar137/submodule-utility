@@ -1,7 +1,7 @@
 module Main where
 import System.IO
 import System.Process 
-import Data.Maybe (isJust)
+import System.Directory (doesFileExist)
 
 
 data SubmoduleConfig
@@ -31,16 +31,22 @@ parseFile x = case head x of
 bfs :: (String -> Maybe SubmoduleConfig -> IO String) -> String -> IO [Maybe SubmoduleConfig]
 bfs f path = do
   let moduleFilePath = path ++ "/.gitmodules"
-  modulefile <- readFile moduleFilePath
-  let arr = [words i | i <- lines modulefile]
-  let parsedModules = map parseFile arr
-  print path
+  configFileExists <- doesFileExist moduleFilePath
+  if configFileExists 
+    then do 
+  
+      modulefile <- readFile moduleFilePath
+      let arr = [words i | i <- lines modulefile]
+      let parsedModules = map parseFile arr
+      print path
 
-  clonedModules <- mapM (f path) parsedModules
+      clonedModules <- mapM (f path) parsedModules
 
-  -- mapM makes this breadth first 
-  nextResults <- mapM (bfs f) [path ++ "/" ++ s | s <- filter (/= "") clonedModules]
-  return (parsedModules ++ concat nextResults)
+      -- mapM makes this breadth first 
+      nextResults <- mapM (bfs f) [path ++ "/" ++ s | s <- filter (/= "") clonedModules]
+      return (parsedModules ++ concat nextResults)
+    else do
+      return [Nothing]
 
   
 gitClone :: String -> Maybe SubmoduleConfig -> IO String
