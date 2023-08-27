@@ -1,7 +1,7 @@
 module Main where
-import Data.Maybe (isJust)
-import System.Process 
 import System.IO
+import System.Process 
+import Data.Maybe (isJust)
 
 
 data SubmoduleConfig
@@ -28,24 +28,26 @@ parseFile x = case head x of
   _ -> Nothing
 
 
-dfs :: (String -> Maybe SubmoduleConfig -> IO String) -> String -> IO [Maybe SubmoduleConfig]
-dfs f path = do
+bfs :: (String -> Maybe SubmoduleConfig -> IO String) -> String -> IO [Maybe SubmoduleConfig]
+bfs f path = do
   let moduleFilePath = path ++ "/.gitmodules"
   modulefile <- readFile moduleFilePath
   let arr = [words i | i <- lines modulefile]
   let parsedModules = map parseFile arr
   print path
+
   clonedModules <- mapM (f path) parsedModules
 
-  nextResults <- mapM (dfs f) [path ++ "/" ++ s | s <- filter (/= "") clonedModules]
+  -- mapM makes this breadth first 
+  nextResults <- mapM (bfs f) [path ++ "/" ++ s | s <- filter (/= "") clonedModules]
   return (parsedModules ++ concat nextResults)
 
   
--- TODO: this needs to CD into the path before running the command.
 gitClone :: String -> Maybe SubmoduleConfig -> IO String
 gitClone basePath (Just (Path moduleConfig)) = do
   let command = "git submodule update --init " ++ show moduleConfig
   (_, Just hout, _, _) <- createProcess (shell command) { std_out = CreatePipe, cwd = Just basePath }
+  -- TODO: handle the case where file is not found.
   output <- hGetContents hout
   putStrLn output
   putStrLn ("Current path: " ++ moduleConfig)
@@ -75,6 +77,6 @@ main = do
   let formattedPath = sanitizeString ["\n", "\r"] curdir
   print formattedPath 
   -- result <- dfs gitClone curdir
-  result <- dfs gitClone "/tmp/submodule-script-test"
+  result <- bfs gitClone "/tmp/submodule-script-test"
   pp result
   putStrLn ""
